@@ -184,8 +184,7 @@ export default class App extends Component<Props> {
 		const ctx = canvas.getContext('2d');
 		ctx.fillStyle = 'purple';
 		ctx.fillRect(0, 0, 1000, 1000);
-		//render_gbp(canvas, this.state.console)
-		//render_gbp(canvas, sample_image);
+		render_gbp(canvas, this.image_placeholder);
 	}
 	
 	onUsbAttached(){}// { this._getDeviceList() }
@@ -216,19 +215,25 @@ export default class App extends Component<Props> {
 		else{
 			this.setState({text: ascii_console});
 		}
-		//render_gbp(this.handleCanvas, this.state.console)
 		this.image_placeholder += ascii_console;
-		//console.warn(this.testVariable);
 	}
 
-	/* componentDidUpdate(this.image_placeholder, this.image_placeholder) {
-		// only update chart if the data has changed
-		/* if (prevProps.data !== this.props.data) {
-			this.chart = c3.load({
-			data: this.props.data
-			});
-		} */
-	
+	componentWillUpdate(nextProps, nextState) {
+		// Are we adding new items to the list?
+		// Capture the scroll position so we can adjust scroll later.
+		//if (this.props.list.length < nextProps.list.length) {
+		//	this.previousScrollOffset =
+		//	this.listRef.scrollHeight - this.listRef.scrollTop;
+		//}
+	}
+
+	componentDidUpdate(prevProps, prevState) {
+		if (this.image_placeholder.includes("# Finished Pretending")) {
+			console.warn("FINISHED PRINTING");
+			//I CAN'T FIGURE OUT HOW TO RENDER THE CANVAS AGAIN, this line below does not work.
+			render_gbp(this.handleCanvas, this.image_placeholder);
+		}
+	}
 	
 	componentDidMount() {
 		DeviceEventEmitter.addListener('onServiceStarted', this.onServiceStarted, this)
@@ -257,7 +262,6 @@ export default class App extends Component<Props> {
 		console.warn(width);
 		console.warn(height);
 	}
-	
 	
 		
   render() {
