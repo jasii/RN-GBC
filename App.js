@@ -18,17 +18,18 @@ const welcome = "Connect your Gameboy Camera and PRINT";
 const TILE_PIXEL_WIDTH = 8;
 const TILE_PIXEL_HEIGHT = 8;
 const TILES_PER_LINE = 20; // Gameboy Printer Tile Constant
-var square_width = 100 / (TILE_PIXEL_WIDTH * TILES_PER_LINE);
-var square_height = square_width;
-
+/* var square_width = 450 / (TILE_PIXEL_WIDTH * TILES_PER_LINE);
+var square_height = square_width; */
+var square_width = null;
+var square_height = null;
 
 const colors = new Array("#ffffff", "#aaaaaa", "#555555", "#000000");
 
-
-function render_gbp(canvas, rawBytes)
+function render_gbp(canvas, rawBytes, canvas_width)
 {   // Returns false on error
     var status = true;
-
+	var square_width = canvas_width / (TILE_PIXEL_WIDTH * TILES_PER_LINE);
+	var square_height = square_width;
     // Clear Screen
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -174,20 +175,17 @@ export default class App extends Component<Props> {
 			printer_status: 'print',
 			text: 'Plug in Gameboy Printer Emulator',
 			Status: '',
-			console: '',
-			canvas_width: "100px"
+			console: ''
 		};
 		this.image_placeholder = '';
 		this.canvas = null;
+		this.canvas_width = '';
 	}
 	
 	handleCanvas = (canvas) => {
 		this.canvas = canvas;
-	
 		const ctx = canvas.getContext('2d');
-		ctx.fillStyle = 'purple';
-		ctx.fillRect(0, 0, 1000, 1000);
-		render_gbp(canvas, this.image_placeholder);
+		render_gbp(canvas, this.image_placeholder, this.canvas_width);
 	}
 	
 	onUsbAttached(){}// { this._getDeviceList() }
@@ -232,9 +230,8 @@ export default class App extends Component<Props> {
 
 	componentDidUpdate(prevProps, prevState) {
 		if (this.image_placeholder.includes("# Finished Pretending")) {
-			console.warn("FINISHED PRINTING");
-			//I CAN'T FIGURE OUT HOW TO RENDER THE CANVAS AGAIN, this line below does not work.
-			render_gbp(this.canvas, this.image_placeholder);
+			//console.warn("FINISHED PRINTING");
+			render_gbp(this.canvas, this.image_placeholder, this.canvas_width);
 		}
 	}
 	
@@ -262,8 +259,9 @@ export default class App extends Component<Props> {
 		const {x, y, width, height} = layout;
 		//console.warn(x);
 		//console.warn(y);
-		console.warn(width);
-		console.warn(height);
+		//console.warn(width);
+		//console.warn(height);
+		this.canvas_width = width;
 	}
 	
 		
@@ -284,7 +282,7 @@ export default class App extends Component<Props> {
 		<Text>
 			{this.state.console}
 		</Text>
-		<Canvas ref={this.handleCanvas}></Canvas>
+		<Canvas ref={this.handleCanvas} style={styles.canvas}></Canvas>
       </View>
 	  </View>
     );
@@ -308,4 +306,9 @@ const styles = StyleSheet.create({
     color: '#333333',
     marginBottom: 5,
   },
+  canvas: {
+	  borderWidth: 1,
+	  borderColor: '#000',
+	  backgroundColor: '#000',
+  }
 });
