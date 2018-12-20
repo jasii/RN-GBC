@@ -178,9 +178,12 @@ export default class App extends Component<Props> {
 			canvas_width: "100px"
 		};
 		this.image_placeholder = '';
+		this.canvas = null;
 	}
 	
 	handleCanvas = (canvas) => {
+		this.canvas = canvas;
+	
 		const ctx = canvas.getContext('2d');
 		ctx.fillStyle = 'purple';
 		ctx.fillRect(0, 0, 1000, 1000);
@@ -231,7 +234,7 @@ export default class App extends Component<Props> {
 		if (this.image_placeholder.includes("# Finished Pretending")) {
 			console.warn("FINISHED PRINTING");
 			//I CAN'T FIGURE OUT HOW TO RENDER THE CANVAS AGAIN, this line below does not work.
-			render_gbp(this.handleCanvas, this.image_placeholder);
+			render_gbp(this.canvas, this.image_placeholder);
 		}
 	}
 	
