@@ -7,7 +7,7 @@
  */
 
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View, ActivityIndicator, Button} from 'react-native';
+import {Platform, StyleSheet, Text, View, Button, StatusBar, Image} from 'react-native';
 import { RNSerialport } from 'react-native-serialport';
 import {DeviceEventEmitter} from 'react-native';
 import Canvas, {Image as CanvasImage, Path2D} from 'react-native-canvas';
@@ -158,14 +158,20 @@ function paint(canvas, pixels, pixel_width, pixel_height, tile_x_offset, tile_y_
 
 
 function hex_to_ascii(data){
-			var hex  = data.toString();
-			var str = '';
-			for (var n = 0; n < hex.length; n += 2) {
-				str += String.fromCharCode(parseInt(hex.substr(n, 2), 16));
-			}
+	var hex  = data.toString();
+	var str = '';
+	for (var n = 0; n < hex.length; n += 2) {
+		str += String.fromCharCode(parseInt(hex.substr(n, 2), 16));
+	}
+	if(isASCII(str)){
 		return str;
 	}
+	return '';
+}
 
+function isASCII(str) {
+    return /^[\x00-\x7F]*$/.test(str);
+}
 
 
 export default class App extends Component<Props> {
@@ -173,50 +179,72 @@ export default class App extends Component<Props> {
 		super(props);
 		this.state = {
 			printer_status: 'print',
-			text: 'Plug in Gameboy Printer Emulator',
+			printer_status_color: '#aaaaaa',
+			text: '',
 			Status: '',
-			console: ''
+			console: '',
+			image: '',
+			render_bool: false
 		};
 		this.image_placeholder = '';
 		this.canvas = null;
+		this.top_cut_canvas = null;
 		this.canvas_width = '';
+		this.ascii_console_temp = '';
 	}
 	
 	handleCanvas = (canvas) => {
 		this.canvas = canvas;
 		const ctx = canvas.getContext('2d');
-		render_gbp(canvas, this.image_placeholder, this.canvas_width);
+		ctx.fillStyle = 'purple';
+		ctx.fillRect(0, 0, 100, 100);
+		render_gbp(canvas, this.image_placeholder, 0);
 	}
 	
 	onUsbAttached(){}// { this._getDeviceList() }
 	onUsbDetached()  {this.setState({
 		Status: 'USB Detached',
-		printer_status: 'print'
+		printer_status: 'print',
+		printer_status_color: '#aaaaaa',
 	})}
 	onUsbNotSupperted() {this.setState({Status: 'USB Not Supported'})}
 	onError(error) {alert('Code: ' + error.errorCode + ' Message: ' +error.errorMessage)}
 	onConnectedDevice()  {this.setState({
 		Status: 'Connected',
-		printer_status: 'print'
+		printer_status: 'print',
+		printer_status_color: '#000',
 	})}
 	onDisconnectedDevice() {this.setState({
-		Status: 'Gameboy Detacted',
-		printer_status: 'print'
+		Status: 'GameBoy Detacted',
+		printer_status: 'print',
+		printer_status_color: '#aaaaaa',
 	})}
 	onServiceStarted() {this.setState({
-		Status: 'Service Started',
-		printer_status: 'print'
+		Status: 'Connect your GameBoy',
+		printer_status: 'print',
+		printer_status_color: '#aaaaaa',
 	})}
 	onServiceStopped() {this.setState({Status: 'Service Stopped'})}
 	onReadData(data) {
 		let ascii_console = hex_to_ascii(data);
-		if (ascii_console.startsWith("# GAMEBOY PRINTER")){
-			this.setState({text: "Gameboy Printer Emulator connected, now PRINT"});
+		//this.setState({ascii_console: ascii_console});
+		//console.warn("ascii: " + ascii_console + "data: " + data);
+		if (data.startsWith("232047")){
+			this.setState({text: "GameBoy Printer Emulator connected, now PRINT", printer_status_color: '#000'});
+		}// BAD ASCII
+		else if(ascii_console == ''){
+			this.setState({text: ''});
+		}// GOOD ASCII
+		else {
+			this.ascii_console_temp += ascii_console;
+			this.setState({text: 'receiving...'});
+			if(this.ascii_console_temp.includes("# Finished Pretending")){
+				console.warn("finished printing");
+				this.setState({text: 'Image recieved'});
+				this.setState({image: this.ascii_console_temp});
+				this.setState({render_bool: true});
+			}
 		}
-		else{
-			this.setState({text: ascii_console});
-		}
-		this.image_placeholder += ascii_console;
 	}
 
 	componentWillUpdate(nextProps, nextState) {
@@ -229,9 +257,13 @@ export default class App extends Component<Props> {
 	}
 
 	componentDidUpdate(prevProps, prevState) {
-		if (this.image_placeholder.includes("# Finished Pretending")) {
+		if (this.state.render_bool) {
 			//console.warn("FINISHED PRINTING");
-			render_gbp(this.canvas, this.image_placeholder, this.canvas_width);
+			this.setState({text: 'Rendering photo'});
+			this.ascii_console_temp = '';
+			console.warn("ascii_console_temp: " + this.ascii_console_temp);
+			render_gbp(this.canvas, this.state.image, this.canvas_width);
+			this.setState({render_bool: false});
 		}
 	}
 	
@@ -264,51 +296,89 @@ export default class App extends Component<Props> {
 		this.canvas_width = width;
 	}
 	
+	/* cutCanvas = (canvas) => {
+	this.top_cut_canvas = canvas;
+    const ctx = canvas.getContext('2d');
+	ctx.fillStyle = 'purple';
+    ctx.beginPath();
+    ctx.moveTo(15, 0);
+    ctx.lineTo(0, 30);
+    ctx.lineTo(30, 30);
+    ctx.fill();
+	} */
+	
 		
-  render() {
+   render() {
     return (
-      <View onLayout={(event) => { this.find_dimesions(event.nativeEvent.layout) }} style={styles.container}>
-		
+    <View onLayout={(event) => { this.find_dimesions(event.nativeEvent.layout) }} style={styles.main}>
+		<Header
+			statusBarProps={{ barStyle: 'default'}}
+			//leftComponent={{ icon: 'menu', color: '#fff' }}
+			centerComponent={{ text: 'GAMEBOY PRINTER', style: { color: '#fff', fontFamily: 'Early GameBoy Regular'} }}
+			rightComponent={{ icon: this.state.printer_status, color: this.state.printer_status_color,}}
+			containerStyle={{borderStyle: 'none'}}
+			backgroundColor='#872D63'
+			//backgroundColor='#F5FCFF'
+		/>
 		<View style={styles.container}>
-	  
-		<ActivityIndicator size="large" color="#0000ff" />
-        <Text style={styles.welcome}>{welcome}</Text>
-		<Text>
-          GBC STATUS {this.state.Status}
-        </Text>
-		<Text>
-			{this.state.text}
-		</Text>
-		<Text>
-			{this.state.console}
-		</Text>
+			<Text style={styles.instructions}>{this.state.Status}</Text>
+			<Text style={styles.instructions}>{this.state.text}</Text>
+			<Text style={styles.instructions}>{this.state.console}</Text>
+		</View>
+		<View style={styles.canvasborder}>
 		<Canvas ref={this.handleCanvas} style={styles.canvas}></Canvas>
-      </View>
-	  </View>
+		</View>
+	</View>
     );
   }
 }
-
+//38
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+	fontFamily: 'Early GameBoy Regular',
+	//paddingTop: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5FCFF',
+    //backgroundColor: '#ccc',
+	color: '#323586',
+  },
+  main: {
+	//backgroundColor: '#fff',
+	backgroundColor:'#ccc', 
+	flex: 1,
   },
   welcome: {
+	  //fontFamily: 'Early GameBoy Regular',
     fontSize: 20,
     textAlign: 'center',
     margin: 10,
   },
   instructions: {
-    textAlign: 'center',
-    color: '#333333',
-    marginBottom: 5,
+	//fontFamily: 'Early GameBoy Regular',
+    //textAlign: 'center',
+    color: '#323586',
+    //marginBottom: 5,
   },
   canvas: {
 	  borderWidth: 1,
+	  //height: {this.canvas_height},
 	  borderColor: '#000',
 	  backgroundColor: '#000',
+	  //marginTop:25,
+  },
+  palette: {
+	  width: 100,
+	  height: 10,
+  },
+  canvasborder: {
+	  borderWidth: 0,
+	  borderColor: '#000',
+	  backgroundColor: '#fff',
+	  //borderBottomWidth: 3,
+	  //borderTopWidth: 3,
+	  //borderLeftWidth: 0,
+	  //borderRightWidth: 0,
+	  paddingTop:50,
+	  paddingBottom:50,
   }
 });
